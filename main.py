@@ -48,7 +48,8 @@ detector = vision.FaceLandmarker.create_from_options(options)
 
 object_detector_options = python.BaseOptions(model_asset_path='object_detection.tflite')
 options = vision.ObjectDetectorOptions(
-    base_options=object_detector_options, 
+    base_options=object_detector_options,
+    category_denylist=['person'], 
     score_threshold=0.5
 )
 object_detector = vision.ObjectDetector.create_from_options(options)
