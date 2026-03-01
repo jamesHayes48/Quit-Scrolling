@@ -1,4 +1,5 @@
 import cv2
+import time
 import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -60,6 +61,9 @@ RIGHT_EYE = [362, 263, 387, 385, 380, 373, 390, 249]
 LEFT_IRIS = [468, 469, 470, 471]
 RIGHT_IRIS = [473, 474, 475, 476]
 
+start_time = 0
+alert_fired = False
+
 try:
     while True:
         ret, frame = cap.read()
@@ -70,14 +74,15 @@ try:
         mp_img = mp_image(image_format=mp_image_format.SRGB, data=rgb)
         face_results = detector.detect(mp_img)
         object_results = object_detector.detect(mp_img)
-
+        duration_window = 5
+       
         # Draw face landmarks for each face
         if face_results.face_landmarks:
             for face in face_results.face_landmarks:
-                #draw_landmarks(frame, face)
+                draw_landmarks(frame, face)
                 # Draw outline of left and right eye
-                draw_specific_landmarks(frame, face, (255, 0, 0), 1, LEFT_EYE)
-                draw_specific_landmarks(frame, face, (255, 0, 0), 1, RIGHT_EYE)
+                #draw_specific_landmarks(frame, face, (255, 0, 0), 1, LEFT_EYE)
+                #draw_specific_landmarks(frame, face, (255, 0, 0), 1, RIGHT_EYE)
 
                 right_iris_points = [face[i] for i in RIGHT_IRIS]
         
@@ -86,6 +91,14 @@ try:
             start_point = int(bbox.origin_x), int(bbox.origin_y)
             end_point = int(bbox.origin_x + bbox.width), int(bbox.origin_y + bbox.height)
             cv2.rectangle(frame, start_point, end_point, (0, 255, 0), 2)
+
+        if not face_results.face_landmarks and object_results.detections:
+            start_time = time.perf_counter()
+            current_time = time.perf_counter()   
+            elapsed_time = current_time - start_time
+            if elapsed_time >= duration_window:
+                cv2.putText(frame, 'No face or object detected', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
 
         cv2.imshow("Camera", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
