@@ -5,6 +5,14 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
+
+LEFT_EYE = [33, 133, 160, 158, 153, 144, 163, 7]
+RIGHT_EYE = [362, 263, 387, 385, 380, 373, 390, 249]
+
+LEFT_IRIS = [468, 469, 470, 471]
+RIGHT_IRIS = [473, 474, 475, 476]
+
+
 def draw_landmarks(image, landmarks, color=(0, 255, 0), radius=1):
     '''Draw landmarks on face detected
     
@@ -35,6 +43,17 @@ def draw_specific_landmarks(image, landmarks, color=(255, 0, 0), radius=1, indic
         y = int(lm.y * image.shape[0])
         cv2.circle(image, (x, y), radius, color, -1)
 
+
+def get_iris_avg(landmarks):
+    iris_points = LEFT_IRIS + RIGHT_IRIS
+    if not landmarks or max(iris_points) >= len(landmarks):
+        return None, None
+
+    selected = [landmarks[idx] for idx in iris_points]
+    avg_x = sum(point.x for point in selected) / len(selected)
+    avg_y = sum(point.y for point in selected) / len(selected)
+    return avg_x, avg_y
+
 # Open Camera
 cap = cv2.VideoCapture(0)
 
@@ -55,11 +74,8 @@ options = vision.ObjectDetectorOptions(
 )
 object_detector = vision.ObjectDetector.create_from_options(options)
 
-LEFT_EYE = [33, 133, 160, 158, 153, 144, 163, 7]
-RIGHT_EYE = [362, 263, 387, 385, 380, 373, 390, 249]
 
-LEFT_IRIS = [468, 469, 470, 471]
-RIGHT_IRIS = [473, 474, 475, 476]
+NOSE = 1
 
 start_time = 0
 alert_fired = False
@@ -76,16 +92,18 @@ try:
         object_results = object_detector.detect(mp_img)
         duration_window = 5
        
+       
         # Draw face landmarks for each face
         if face_results.face_landmarks:
             for face in face_results.face_landmarks:
-                draw_landmarks(frame, face)
-                # Draw outline of left and right eye
-                #draw_specific_landmarks(frame, face, (255, 0, 0), 1, LEFT_EYE)
-                #draw_specific_landmarks(frame, face, (255, 0, 0), 1, RIGHT_EYE)
+                #draw_landmarks(frame, face)
+                draw_specific_landmarks(frame, face, color=(0, 255, 0), radius=2, indices=LEFT_IRIS)
+                draw_specific_landmarks(frame, face, color=(255, 0, 0), radius=2, indices=RIGHT_IRIS)
 
-                right_iris_points = [face[i] for i in RIGHT_IRIS]
-        
+        if face_results.face_landmarks:
+            avg_iris_x, avg_iris_y = get_iris_avg(landmarks=face_results.face_landmarks[0])
+            print(f"Average Iris Position: ({avg_iris_x}, {avg_iris_y})")
+
         if object_results.detections:
             bbox = object_results.detections[0].bounding_box
             start_point = int(bbox.origin_x), int(bbox.origin_y)
