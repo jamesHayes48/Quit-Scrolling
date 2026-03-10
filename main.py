@@ -68,9 +68,23 @@ def get_face_direction(yaw_score):
     return 'CENTER'
 
 
+valid_directions = ['LEFT', 'RIGHT', 'CENTER']
+user_direction = []
+user_dir = ""
+user_add = True
+while len(user_direction) < 1 or user_add:
+    user_dir = input("Enter direction that you will be facing (LEFT, RIGHT, CENTER) or q to quit: ").strip().upper()
+    if user_dir in valid_directions:
+        user_direction.append(user_dir)
+    elif user_dir.lower() == 'q':
+        user_add = False
+    else:
+        print("Invalid input. Please enter LEFT, RIGHT, CENTER or q to quit.")
+
+
 # Open Camera
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_BRIGHTNESS, 150)
+
 mp_image = mp.Image
 mp_image_format = mp.ImageFormat
 base_options = python.BaseOptions(model_asset_path='face_landmarker.task')
@@ -86,6 +100,7 @@ no_object_start_time = None
 try:
     while True:
         ret, frame = cap.read()
+        frame = cv2.convertScaleAbs(frame, alpha=1.5, beta=30)
         if not ret:
             break
 
@@ -94,7 +109,8 @@ try:
         face_results = detector.detect(mp_img)
 
         has_face = bool(face_results.face_landmarks)
-       
+        direction = None
+
         # Draw face landmarks for each face
         if face_results.face_landmarks:
             for face in face_results.face_landmarks:
@@ -112,14 +128,14 @@ try:
                 )
 
         # Start and maintain timer only while a face is present and object is missing.
-        if has_face and not has_object:
+        if not has_face or direction is None or direction not in user_direction:
             if no_object_start_time is None:
                 no_object_start_time = time.perf_counter()
 
             elapsed_time = time.perf_counter() - no_object_start_time
             cv2.putText(
                 frame,
-                f'Face w/o object: {elapsed_time:.1f}s',
+                f'Pay Attention!: {elapsed_time:.1f}s',
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
